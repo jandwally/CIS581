@@ -13,6 +13,7 @@
     - Input x: N × 1 vector representing the column coordinates of corners.
     - Input y: N × 1 vector representing the row coordinates of corners.
     - Outpuy descs: 64 × N matrix, with column i being the 64 dimensional descriptor (8 × 8 grid linearized) computed at location (xi , yi) in img.
+Mia is the best in the world and John is annoying 
 '''
 
 def feat_desc(img, x, y):
