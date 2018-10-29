@@ -11,7 +11,8 @@
     - Input img: H × W matrix representing the gray scale input image.
     - Output cimg: H × W matrix representing the corner metric matrix.
 '''
+from skimage.feature import corner_harris
 
 def corner_detector(img):
-  # Your Code Here
+  cimg = corner_harris(img)
   return cimg
