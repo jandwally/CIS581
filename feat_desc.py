@@ -40,7 +40,10 @@ def feat_desc(image, x, y):
     ## todo: deal with out of bounds (negative pixels and >h,w pixels)
     ## just replace with zeros in the sample???
     sample_idx = np.round(sample_idx).astype(int)
-
+    sample_idx[0,sample_idx<0] = 0
+    sample_idx[1,sample_idx<0] = 0
+    sample_idx[0,sample_idx>image.shape[0]-1] = image.shape[0]-1
+    sample_idx[1,sample_idx>image.shape[1]-1] = image.shape[1]-1
     # Sample the pixels from the image, and reshape + standardize to form the descriptor
     samples = image[sample_idx[0], sample_idx[1]]
     descriptors[:,n] = (samples - np.mean(samples)) / np.std(samples)
