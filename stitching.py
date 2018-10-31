@@ -1,4 +1,3 @@
-# stitching.py
 '''
   File name: stitching.py
 '''
@@ -6,10 +5,18 @@
 # libs
 import numpy as np
 import matplotlib.pyplot as plt
+<<<<<<< HEAD
 from skimage.feature import corner_harris
 import os
 from scipy import signal
 from PIL import Image
+=======
+import os
+from scipy import signal
+from PIL import Image
+
+from skimage.feature import corner_peaks, peak_local_max
+>>>>>>> 4bd9615e70cfc4a776d8c6d28878686da6106121
 
 from skimage.feature import corner_peaks, peak_local_max
 # files
@@ -32,6 +39,11 @@ def rgb2gray(I_rgb):
 def stitching():
     img = np.array([[1,1,0],[1,0,0],[0,0,0]])
     print(corner_harris(img))
+
+    # load images
+    print("Opening images...")
+    image1 = np.array(Image.open("images/philly-3.jpg").convert('RGB'))
+    image2 = np.array(Image.open("images/philly-4.jpg").convert('RGB'))
 
     # load images
     print("Opening images...")
