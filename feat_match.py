@@ -14,6 +14,20 @@
                     feature i in descriptor descs1. If no match is found, you should put match i = −1.
 '''
 
+import numpy as np
+
 def feat_match(descs1, descs2):
-  # Your Code Here
+  h,w= descs1.shape[0:2]
+  b = np.zeros([h*w,h,w])
+  for i in range(h):
+    for j in range(w):
+      curr = np.empty([h,w])
+      curr.fill(descs2[i,j])
+      b[(i*h+j),:,:] = curr
+  matched = descs1[np.newaxis,:]-b[:,np.newaxis]
   return match
+
+a= np.array([[5,4,3],[10,9,1]])
+c = np.array([[1,2,3],[4,5,6]])
+print(feat_match(a,c))
+
