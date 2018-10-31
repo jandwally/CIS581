@@ -1,6 +1,5 @@
-im so over my eyes rn 
+
 # stitching.py
-=======
 
 '''
   File name: stitching.py
@@ -9,13 +8,14 @@ im so over my eyes rn
 # libs
 import numpy as np
 import matplotlib.pyplot as plt
-
+from skimage.feature import corner_harris
 # files
 
 
 # Image blending script:
 def stitching():
-
+    img = np.array([[1,1,0],[1,0,0],[0,0,0]])
+    print(corner_harris(img))
     # corner_detector
     
 
