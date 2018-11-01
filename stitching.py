@@ -76,28 +76,40 @@ def stitching():
 
     # find the matches
     print("Finding matches...")
-    matches_idx = feat_match(descriptors1, descriptors2)
-    print(matches_idx)
-    #### for now use these to test
-    #matches_idx = np.arange(0, 6)
-    #corners1 = np.array([
-    #    [750, 985, 839, 1306, 1693, 1687],
-    #    [488, 1142, 799, 537, 494, 1071]
-    #])
-    #corners2 = np.array([
-    #    [171, 431, 274, 788, 1141, 1131],
-    #    [464, 1174, 795, 549, 519, 1065]
-    #])
+    #matches_idx = feat_match(descriptors1, descriptors2)
+    #print(matches_idx)
+    ### for now use these to test
+    matches_idx = np.array([0, -1, 2, 3, 4, -1])
+    corners1 = np.array([
+        [750, 985, 839, 1306, 1693, 1687],
+        [488, 1142, 799, 537, 494, 1071]
+    ])
+    corners2 = np.array([
+        [171, 431, 274, 788, 1141, 1131],
+        [464, 1174, 795, 549, 519, 1065]
+    ])
+    print("matches", matches_idx)
 
     # preparing matched points (have to deal with -1 sometime)
+
+    # Boolean vector corresponding to whether or not there was a match found
+    # For now, set all -1s to 0 so it works
     num_match = matches_idx.shape[0]
+    has_match = np.where(matches_idx != -1)
+    matches_idx[np.where(matches_idx == -1)] = 0
+
+    # Pair up the matches
     x1, y1 = corners1[1], corners1[0]
     x2, y2 = np.zeros(num_match).astype(int), np.zeros(num_match).astype(int)
-
     idx = np.arange(0, num_match)
-    # idx = np.arange(0, num_match)
     x2[matches_idx] = corners2[1,idx]
     y2[matches_idx] = corners2[0,idx]
+
+    # Get rid of non-matches
+    x1 = x1[has_match]
+    y1 = y1[has_match]
+    x2 = x2[has_match]
+    y2 = y2[has_match]
 
     print("matches", matches_idx)
     print("idx:", idx)
@@ -105,6 +117,7 @@ def stitching():
     print("y1:", y1)
     print("x2:", x2)
     print("y2:", y2)
+
 
     # RANSAC
     print("Doing RANSAC...")
@@ -125,28 +138,42 @@ def stitching():
     plt.imshow(image1)
     plt.show()
 
-    # image_transformed = np.zeros(image2.shape).astype(np.uint8)
-    # print(image_transformed.shape)
-    # for i in range(3):
-    #     print("transforming...")
-    #     image_transformed[:,:,i] = geometric_transform(image2[:,:,i], apply_homography)
-    #     print(image_transformed[:,:,i])
-    # plt.imshow(image_transformed)
-    # plt.show()
+    h, w = image1.shape[0:2]
+    mosaic_shape = (h, 3*w, 3)
+
+    image_transformed = np.zeros(image2.shape).astype(np.uint8)
+    print(image_transformed.shape)
+    for i in range(3):
+        print("transforming...")
+        image_transformed[:,:,i] = geometric_transform(image2[:,:,i], apply_homography, output_shape=mosaic_shape)
+        print(image_transformed[:,:,i])
+    plt.imshow(image_transformed)
+    plt.show()
 
     # Transform indices
-    #xs, ys = np.
-    idx_transformed = map_coordinates(image2[:,:,i], apply_homography)
+    # xs, ys = np.meshgrid(np.arange(0,h), np.arange(0,w))
+    # print("transforming (1)...")
+    # x_transformed = geometric_transform(xs, apply_homography)
+    # print("transforming (2)...")
+    # y_transformed = geometric_transform(ys, apply_homography)
 
-    h, w = image1.shape[0:2]
-    mosaic = np.zeros((h,3*w,3))
+    # print(x_transformed)
+    # print(y_transformed)
 
-    # Put center image in the middle
-    mosaic[:, w:(2*w), :] = image1
+    image_transformed = np.zeros(image1.shape)
+    image_transformed[x_transformed, y_transformed, :] = image2[xs, ys, :]
 
-    is_mosaic = (image_transformed > np.array([0,0,0]))
-    image_final[is_mosaic] = image1 * (not is_mosaic) + image_transformed * is_mosaic
-    mosaic[:, w:(2*w), :] = image_final
+    plt.imshow(image_transformed)
+    plt.show()
+
+    # mosaic = np.zeros((h,3*w,3))
+
+    # # Put center image in the middle
+    # mosaic[:, w:(2*w), :] = image1
+
+    # is_mosaic = (image_transformed > np.array([0,0,0]))
+    # image_final[is_mosaic] = image1 * (not is_mosaic) + image_transformed * is_mosaic
+    # mosaic[:, w:(2*w), :] = image_final
 
     plt.imshow(mosaic)
     plt.show()
