@@ -15,6 +15,10 @@ from corner_detector import *
 from anms import *
 from feat_desc import *
 from feat_match import *
+from ransac_est_homography import *
+
+# constants
+ERROR_THRESH = 0.5
 
 '''
   Convert RGB image to gray one manually
@@ -44,7 +48,7 @@ def stitching():
 
     # adaptive non-maximal suppression
     print("Non-maximal suppression...")
-    max_pts = 20
+    max_pts = 6
     corners1 = anms(corner_matrix1, max_pts)
     corners2 = anms(corner_matrix2, max_pts)
     # print("corners1", corners1)
@@ -71,18 +75,27 @@ def stitching():
 
     # find the matches
     print("Finding matches...")
-    matches_idx = feat_match(descriptors1, descriptors2)
-    #matches_idx = np.arange(0, corners1[0].shape[0])
+    #matches_idx = feat_match(descriptors1, descriptors2)
+    #### for now use these to test
+    matches_idx = np.arange(0, 6)
+    corners1 = np.array([
+        [750, 985, 839, 1306, 1693, 1687],
+        [488, 1142, 799, 537, 494, 1071]
+    ])
+    corners2 = np.array([
+        [171, 431, 274, 788, 1141, 1131],
+        [464, 1174, 795, 549, 519, 1065]
+    ])
 
-    # preparing matched points
+    # preparing matched points (have to deal with -1 sometime)
     num_match = matches_idx.shape[0]
     x1, y1 = corners1[1], corners1[0]
     x2, y2 = np.zeros(num_match).astype(int), np.zeros(num_match).astype(int)
 
     idx = np.arange(0, num_match)
     # idx = np.arange(0, num_match)
-    x2[matches_idx] = x1[idx]
-    y2[matches_idx] = y1[idx]
+    x2[matches_idx] = corners2[1,idx]
+    y2[matches_idx] = corners2[0,idx]
 
     print("matches", matches_idx)
     print("idx:", idx)
@@ -93,6 +106,23 @@ def stitching():
 
     # RANSAC
     print("Doing RANSAC...")
+    homography, inliner_idx = ransac_est_homography(x1, y1, x2, y2, ERROR_THRESH)
+
+    # Mosaicing
+    def apply_homography(output_coords):
+
+        # Apply homography
+        x_source = np.concatenate((x1.reshape((n,1)), y1.reshape((n,1)), np.ones((n,1))), axis=1).transpose((1,0)).astype(int)
+        x_target = np.concatenate((x2.reshape((n,1)), y2.reshape((n,1)), np.ones((n,1))), axis=1).transpose((1,0)).astype(int)
+        print("x_source: ", x_source)
+        print("x_target: ", x_target)
+        x_transform = np.dot(homography, x_source)
+
+        # Normalize z coord back to 1
+        x_transform = x_transform / x_transform[2]
+        print("x_transform: ", x_transform)
+        print("shape: ", x_transform.shape)
+        return (coords[0] - 0.5, coords[1] - 0.5)
 
 
 if __name__ == "__main__":

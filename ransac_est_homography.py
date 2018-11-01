@@ -15,38 +15,90 @@
     - Output inlier_ind: N × 1 vector representing if the correspondence is inlier or not. 1 means inlier, 0 means outlier.
 '''
 
+import numpy as np
+from scipy.optimize import least_squares
+
 from est_homography import est_homography
+
+NUM_RANSAC = 1000
+MIN_CONSENSUS = 10
 
 def ransac_est_homography(x1, y1, x2, y2, thresh):
   n = x1.shape[0]
+  ERROR_THRESH = thresh
 
+  ''' One call to RANSAC '''
   def ransac():
 
     ''' 1. Randomly select 4 points '''
     rands = np.random.permutation(n)[0:4]
+    rand_points1, rand_points2 = np.zeros(4).astype(int), np.zeros(4).astype(int)
     rand_points1 = x1[rands], y1[rands]
     rand_points2 = x2[rands], y2[rands]
+    print("rand_points1", rand_points1)
+    print("rand_points2", rand_points2)
 
-    est_homo = est_homography(x, y, X, Y)
+    ''' 2. Compute homography relating these four matches '''
+    homography = est_homography(rand_points1[0], rand_points1[1], rand_points2[0], rand_points2[1])
+    print("homography:", homography)
 
-  '''
-  We use RANSAC to pull out a minimal set of feature matches, estimate the homography and then
-  count the number of inliers that agree with the current homography estimate. After repeated trials, the
-  homography estimate with the largest number of inliers is used to compute a least squares estimate
-  for the homography, which is then returned in the homography estimate H.
-  H is a 3×3 matrix with 8 degrees of freedom. You need to solve a system of at least 8 linear equations
-  to solve for the 8 unknowns of H. These 8 linear equations are based on the 4 pairs of corresponding
-  points.
-  Recall RANSAC:
-  1. Randomly select four feature pairs
-  2. Compute the homography relating the four selected matches with the function est_homography.m
-  3. Compute the number of inliers to count (SSD distance after applying the estimated homography
-  below the threshold thresh) how many matches agree with this estimate. Don’t forget to create
-  inlier_ind
-  4. Repeat the above random selection nRANSAC times and keep the estimate with the largest number
-  of inliers
-  5. Computes the least squares estimate for the homography using all of the matches previously esti-
-  mated as inliers.
-  '''
+    ''' 3. Find number of inliers for this homography '''
 
-  return H, inlier_ind
+    # Apply homography
+    x_source = np.concatenate((x1.reshape((n,1)), y1.reshape((n,1)), np.ones((n,1))), axis=1).transpose((1,0)).astype(int)
+    x_target = np.concatenate((x2.reshape((n,1)), y2.reshape((n,1)), np.ones((n,1))), axis=1).transpose((1,0)).astype(int)
+    print("x_source: ", x_source)
+    print("x_target: ", x_target)
+    x_transform = np.dot(homography, x_source)
+
+    # Normalize z coord back to 1
+    x_transform = x_transform / x_transform[2]
+    print("x_transform: ", x_transform)
+    print("shape: ", x_transform.shape)
+
+    # Compute SSD between transformed source and target
+    differences = np.sum((np.power(x_transform - x_target, 2)), axis=0)#.reshape((n,))
+    print("differences: ", differences)
+    print("shape: ", differences.shape)
+
+    # Find whether each point is an inlier (thresholding); set them to 1 if they pass
+    inliner_idx = np.zeros(n).astype(int)
+    inliner_idx[np.where(differences < ERROR_THRESH)] = 1
+    num_inliners = np.count_nonzero(inliner_idx)
+    print("inliner_idx: ", inliner_idx)
+    print("num: ", num_inliners)
+
+    ''' Return '''
+    return homography, num_inliners, inliner_idx
+
+  ''' 4. Repeat this process NUM_RANSAC times, and keep the one with the largest number of inliners '''
+  best_homography = None
+  # most_inliers = MIN_CONSENSUS
+  most_inliers = 0
+  inliner_idx = None
+
+  # Do this many times, find the best
+  for i in np.arange(0, NUM_RANSAC):
+    homography, num_inliners, this_inliner_idx = ransac()
+
+    # Save if this homography was better than the previous best
+    if num_inliners > most_inliers:
+      best_homography = homography
+      most_inliers = num_inliners
+      inliner_idx = this_inliner_idx
+
+  print("BEST RANSAC:")
+  print("best_homography:", best_homography)
+  print("most_inliers:", most_inliers)
+
+  ''' 5. Compute the least squares estimate for homography using all inlier matches '''
+
+  # Get all inliers
+  final_x1 = x1[inliner_idx == 1]
+  final_y1 = y1[inliner_idx == 1]
+  final_x2 = x2[inliner_idx == 1]
+  final_y2 = y2[inliner_idx == 1]
+
+  # Recompute final homography with all inliers, and return
+  final_homography = est_homography(x1, y1, x2, y2)
+  return final_homography, inliner_idx

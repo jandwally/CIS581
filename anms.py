@@ -38,49 +38,45 @@ def anms(corner_matrix, max_pts):
   num_corners = corner_coords.shape[0]
 
 
-  ''' Find the M best points '''
+  ''' Prepare the M*M distance matrix '''
 
   # a[i,j] == distance between ith and jth corners
   distances = np.zeros((num_corners, num_corners)).astype(float)
+  idx = np.arange(0, num_corners)
 
   # Iterative version
-  for i in np.arange(0, num_corners):
+  for i in idx:
     this_coords = corner_coords[i]
-    this_corner = corner_matrix[this_coords[0], this_coords[1]]
 
-    for j in np.arange(0, num_corners):
+    for j in idx:
       other_coords = corner_coords[j]
-      other_corner = corner_matrix[other_coords[0], other_coords[1]]
-
-      # Skip self
-      if i == j:
-        distances[i,j] = float("inf")
-        continue
 
       # Compute distance
       distances[i,j] = np.sqrt((this_coords[0] - other_coords[0])**2 + (this_coords[1] - other_coords[1])**2)
 
+  # Set self distances to infinity
+  distances[idx, idx] = inf
 
   # For each corner...
-  for i in np.arange(0, num_corners):
+  for i in idx:
     this_coords = corner_coords[i]
     this_corner = corner_matrix[this_coords[0], this_coords[1]]
 
     # Check against every other corner...
-    for j in np.arange(0, num_corners):
-      other_coords = corner_coords[j]
-      other_corner = corner_matrix[other_coords[0], other_coords[1]]
+    other_corners = corner_matrix[corner_coords[:,0], corner_coords[:,1]]
+    j = np.where(other_corners < HIGH_THRESH * this_corner)
+    distances[i, j] = inf
 
-      # If the other point doesn't satisfy the threshold, set it to infinity
-      if (other_corner < 0.9*this_corner):
-        distances[i,j] = inf
 
+  ''' Find the optimal points from the distance matrix '''
 
   # Get the argmin from each row
   closest_maxima = np.argmin(distances, axis=1)
   rmax = np.max(np.min(distances, axis=1))
 
+  # Best corners are the minima of each each row
   best_corners = np.unique(corner_coords[closest_maxima], axis=0)
+
 
   ''' If we get more than max_pts, just keep the best of those '''
   if (best_corners.shape[0] > max_pts):
