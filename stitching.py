@@ -14,7 +14,7 @@ from skimage.feature import corner_peaks, peak_local_max
 from corner_detector import *
 from anms import *
 from feat_desc import *
-# from feat_match import *
+from feat_match import *
 
 '''
   Convert RGB image to gray one manually
@@ -36,24 +36,17 @@ def stitching():
     image1 = np.array(Image.open("images/philly-3.jpg").convert('RGB'))
     image2 = np.array(Image.open("images/philly-4.jpg").convert('RGB'))
 
-    # load images
-    print("Opening images...")
-    image1 = np.array(Image.open("images/philly-3.jpg").convert('RGB'))
-    image2 = np.array(Image.open("images/philly-4.jpg").convert('RGB'))
-
     # corner_detector
     print("Running corner detection...")
     corner_matrix1 = corner_detector(rgb2gray(image1))
     corner_matrix2 = corner_detector(rgb2gray(image2))
     #print(corner_matrix1)
 
-    # for now just do this
+    # adaptive non-maximal suppression
     print("Non-maximal suppression...")
-    max_pts = 100
+    max_pts = 20
     corners1 = anms(corner_matrix1, max_pts)
     corners2 = anms(corner_matrix2, max_pts)
-    # corners1 = corner_peaks(corner_matrix1, min_distance=3).transpose()
-    # corners2 = corner_peaks(corner_matrix2, min_distance=3).transpose()
     # print("corners1", corners1)
     # print("corners2", corners2)
 
@@ -75,6 +68,32 @@ def stitching():
     descriptors2 = feat_desc(rgb2gray(image2), corners2[1], corners2[0])
     print(descriptors1.shape)
     print(descriptors2.shape)
+
+    # find the matches
+    print("Finding matches...")
+    matches_idx = feat_match(descriptors1, descriptors2)
+    #matches_idx = np.arange(0, corners1[0].shape[0])
+
+    # preparing matched points
+    num_match = matches_idx.shape[0]
+    x1, y1 = corners1[1], corners1[0]
+    x2, y2 = np.zeros(num_match).astype(int), np.zeros(num_match).astype(int)
+
+    idx = np.arange(0, num_match)
+    # idx = np.arange(0, num_match)
+    x2[matches_idx] = x1[idx]
+    y2[matches_idx] = y1[idx]
+
+    print("matches", matches_idx)
+    print("idx:", idx)
+    print("x1:", x1)
+    print("y1:", y1)
+    print("x2:", x2)
+    print("y2:", y2)
+
+    # RANSAC
+    print("Doing RANSAC...")
+
 
 if __name__ == "__main__":
     stitching()
