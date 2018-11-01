@@ -13,6 +13,12 @@
     - Outpuy img_mosaic: H × W × 3 matrix representing the final mosaic image.
 '''
 
+import np as numpy
+from scipy.ndimage.interpolation import geometric_transform, map_coordinates
+
 def mymosaic(img_input):
-  # Your Code Here
+  
+  
+  
+  
   return img_mosaic

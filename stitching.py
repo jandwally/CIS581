@@ -8,7 +8,8 @@ import matplotlib.pyplot as plt
 import os
 from scipy import signal
 from PIL import Image
-from skimage.feature import corner_peaks, peak_local_max
+from skimage.feature import peak_local_max
+from scipy.ndimage.interpolation import geometric_transform, map_coordinates
 
 # files
 from corner_detector import *
@@ -75,17 +76,18 @@ def stitching():
 
     # find the matches
     print("Finding matches...")
-    #matches_idx = feat_match(descriptors1, descriptors2)
+    matches_idx = feat_match(descriptors1, descriptors2)
+    print(matches_idx)
     #### for now use these to test
-    matches_idx = np.arange(0, 6)
-    corners1 = np.array([
-        [750, 985, 839, 1306, 1693, 1687],
-        [488, 1142, 799, 537, 494, 1071]
-    ])
-    corners2 = np.array([
-        [171, 431, 274, 788, 1141, 1131],
-        [464, 1174, 795, 549, 519, 1065]
-    ])
+    #matches_idx = np.arange(0, 6)
+    #corners1 = np.array([
+    #    [750, 985, 839, 1306, 1693, 1687],
+    #    [488, 1142, 799, 537, 494, 1071]
+    #])
+    #corners2 = np.array([
+    #    [171, 431, 274, 788, 1141, 1131],
+    #    [464, 1174, 795, 549, 519, 1065]
+    #])
 
     # preparing matched points (have to deal with -1 sometime)
     num_match = matches_idx.shape[0]
@@ -111,19 +113,43 @@ def stitching():
     # Mosaicing
     def apply_homography(output_coords):
 
-        # Apply homography
-        x_source = np.concatenate((x1.reshape((n,1)), y1.reshape((n,1)), np.ones((n,1))), axis=1).transpose((1,0)).astype(int)
-        x_target = np.concatenate((x2.reshape((n,1)), y2.reshape((n,1)), np.ones((n,1))), axis=1).transpose((1,0)).astype(int)
-        print("x_source: ", x_source)
-        print("x_target: ", x_target)
-        x_transform = np.dot(homography, x_source)
-
-        # Normalize z coord back to 1
+        # Do homography
+        x_output = np.array([ output_coords[0], output_coords[1], 1 ]).astype(int)
+        x_transform = np.dot(homography, x_output)
         x_transform = x_transform / x_transform[2]
-        print("x_transform: ", x_transform)
-        print("shape: ", x_transform.shape)
-        return (coords[0] - 0.5, coords[1] - 0.5)
 
+        x_input = x_transform[0], x_transform[1]
+        return x_input
+
+    # TEST
+    plt.imshow(image1)
+    plt.show()
+
+    # image_transformed = np.zeros(image2.shape).astype(np.uint8)
+    # print(image_transformed.shape)
+    # for i in range(3):
+    #     print("transforming...")
+    #     image_transformed[:,:,i] = geometric_transform(image2[:,:,i], apply_homography)
+    #     print(image_transformed[:,:,i])
+    # plt.imshow(image_transformed)
+    # plt.show()
+
+    # Transform indices
+    #xs, ys = np.
+    idx_transformed = map_coordinates(image2[:,:,i], apply_homography)
+
+    h, w = image1.shape[0:2]
+    mosaic = np.zeros((h,3*w,3))
+
+    # Put center image in the middle
+    mosaic[:, w:(2*w), :] = image1
+
+    is_mosaic = (image_transformed > np.array([0,0,0]))
+    image_final[is_mosaic] = image1 * (not is_mosaic) + image_transformed * is_mosaic
+    mosaic[:, w:(2*w), :] = image_final
+
+    plt.imshow(mosaic)
+    plt.show()
 
 if __name__ == "__main__":
     stitching()
