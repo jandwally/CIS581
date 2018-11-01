@@ -20,11 +20,13 @@ import numpy as np
 def feat_match(descs1, descs2):
   h,w= descs1.shape[0:2]
   pairs = []
+  print(descs2)
   b = np.zeros([h*w,h,w])
   '''For every feature in descs1, i.e. every colomn, lets find the squared 
   difference and put it in diff[:,j]''' 
-  for i in range(descs1.shape[1]):
-    d1i = descs2[:,i]
+  for i in range(descs1.shape[1]-1):
+
+    d1i = descs1[:,i]
     diff = np.zeros((descs2.shape[0],descs2.shape[1]))
     for j in range(descs2.shape[1]):
       diff[:,j] = np.subtract(d1i,descs2[:,j])
@@ -61,8 +63,10 @@ def feat_match(descs1, descs2):
     '''Check that both are greater than a threshold and if so adding that pair of featuers'''
     if ratio < 0.7 and ratios < 0.7:
         #take index_of_best, index_of_second_best,
-      pairs.append(index_of_best[0])
-    return pairs
+      pairs.append(index_of_best[0][0])
+    else:
+      pairs.append(-1)
+  return pairs
 
 a= np.array([[5,4,3],[10,9,1]])
 c = np.array([[1,2,3],[4,5,6]])
