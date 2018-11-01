@@ -12,11 +12,11 @@ from skimage.feature import peak_local_max
 from scipy.ndimage.interpolation import geometric_transform, map_coordinates
 
 # files
-from corner_detector import *
-from anms import *
-from feat_desc import *
-from feat_match import *
-from ransac_est_homography import *
+from corner_detector import corner_detector
+from anms import anms
+from feat_desc import feat_desc
+from feat_match import feat_match
+from ransac_est_homography import ransac_est_homography
 
 # constants
 ERROR_THRESH = 0.5
@@ -33,8 +33,8 @@ def rgb2gray(I_rgb):
 
 # Image blending script:
 def stitching():
-    img = np.array([[1,1,0],[1,0,0],[0,0,0]])
-    print(corner_harris(img))
+    #img = np.array([[1,1,0],[1,0,0],[0,0,0]])
+    #print(corner_harris(img))
 
     # load images
     print("Opening images...")
@@ -76,8 +76,9 @@ def stitching():
 
     # find the matches
     print("Finding matches...")
-    #matches_idx = feat_match(descriptors1, descriptors2)
-    #print(matches_idx)
+    matches_idx = feat_match(descriptors1, descriptors2)
+    print(matches_idx)
+
     ### for now use these to test
     matches_idx = np.array([0, -1, 2, 3, 4, -1])
     corners1 = np.array([
