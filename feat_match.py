@@ -19,20 +19,27 @@ import numpy as np
 from scipy import spatial
 
 def feat_match(descs1, descs2):
+
+  # Swap dimensions of descriptors (makes it easier to work with)
+  descs1 = np.transpose(descs1)
+  descs2 = np.transpose(descs2)
+
   h,w= descs1.shape[0:2]
   print(descs2)
   b = np.zeros([h*w,h,w])
   '''For every feature in descs1, i.e. every colomn, lets find the squared 
   difference and put it in diff[:,j]''' 
 
-  dist = spatial.distance.cdist(descs1,descs2, 'cityblock')
+  dist = spatial.distance.cdist(descs1, descs2, 'cityblock')
   '''Repeat the same process except inverse: we are now iterating through
       the columns of descs2 and finding the difference with the features (cols) of descs1'''
 
   dist2 = spatial.distance.cdist(descs2, descs1, 'cityblock')
 
-  matches_vector = np.zeros(descs1.shape[1]).astype(int)
-  for row in range(dist.shape[0]):
+  n = descs1.shape[0]
+  matches_vector = np.zeros(n).astype(int)
+  print(n)
+  for row in range(n):
     current = dist[row,:]
     current = np.sort(current)
 
@@ -54,7 +61,8 @@ def feat_match(descs1, descs2):
     else:
       matches_vector[row] = -1
   return matches_vector
-
+'''
 a= np.array([[5,4,3],[10,9,1]])
 c = np.array([[1,2,3],[4,5,6]])
 print(feat_match(a,c))
+'''
