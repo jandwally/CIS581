@@ -49,9 +49,9 @@ def stitching():
 
     # adaptive non-maximal suppression
     print("Non-maximal suppression...")
-    max_pts = 6
-    corners1 = anms(corner_matrix1, max_pts)
-    corners2 = anms(corner_matrix2, max_pts)
+    max_pts = 400
+    corners1 = anms(corner_matrix1, max_pts)[0:2]
+    corners2 = anms(corner_matrix2, max_pts)[0:2]
     # print("corners1", corners1)
     # print("corners2", corners2)
 
@@ -69,8 +69,8 @@ def stitching():
 
     # get descriptors
     print("Get descriptor vectors...")
-    descriptors1 = feat_desc(rgb2gray(image1), corners1[1], corners1[0])
-    descriptors2 = feat_desc(rgb2gray(image2), corners2[1], corners2[0])
+    descriptors1 = feat_desc(rgb2gray(image1), corners1[0], corners1[1])
+    descriptors2 = feat_desc(rgb2gray(image2), corners2[0], corners2[1])
     print(descriptors1.shape)
     print(descriptors2.shape)
 
@@ -79,19 +79,21 @@ def stitching():
     matches_idx = feat_match(descriptors1, descriptors2)
     print(matches_idx)
 
+    #'''
     ### for now use these to test
-    matches_idx = np.array([0, -1, 2, 3, 4, -1])
-    corners1 = np.array([
-        [750, 985, 839, 1306, 1693, 1687],
-        [488, 1142, 799, 537, 494, 1071]
-    ])
-    corners2 = np.array([
-        [171, 431, 274, 788, 1141, 1131],
-        [464, 1174, 795, 549, 519, 1065]
-    ])
-    print("matches", matches_idx)
+    #matches_idx = np.array([0, -1, 2, 3, 4, -1])
+    #corners1 = np.array([
+    #    [750, 985, 839, 1306, 1693, 1687],
+    #    [488, 1142, 799, 537, 494, 1071]
+    #])
+    #corners2 = np.array([
+    #    [171, 431, 274, 788, 1141, 1131],
+    #    [464, 1174, 795, 549, 519, 1065]
+    #])
+    #print("matches", matches_idx)
+    #'''
 
-    # preparing matched points (have to deal with -1 sometime)
+    ''' preparing matched points (have to deal with -1) '''
 
     # Boolean vector corresponding to whether or not there was a match found
     # For now, set all -1s to 0 so it works
@@ -103,22 +105,51 @@ def stitching():
     x1, y1 = corners1[1], corners1[0]
     x2, y2 = np.zeros(num_match).astype(int), np.zeros(num_match).astype(int)
     idx = np.arange(0, num_match)
-    x2[matches_idx] = corners2[1,idx]
-    y2[matches_idx] = corners2[0,idx]
+    print("has_match", has_match)
+    print("matches", matches_idx)
+    print("idx:", idx)
+    print("corners2:", corners2)
+    x2[idx] = corners2[1][matches_idx]
+    y2[idx] = corners2[0][matches_idx]
 
     # Get rid of non-matches
+    '''
+    print("BEFORE")
+    print("x1:", x1)
+    print("y1:", y1)
+    print("x2:", x2)
+    print("y2:", y2)
+    '''
+
     x1 = x1[has_match]
     y1 = y1[has_match]
     x2 = x2[has_match]
     y2 = y2[has_match]
 
-    print("matches", matches_idx)
-    print("idx:", idx)
+    '''
+    print("AFTER")
     print("x1:", x1)
     print("y1:", y1)
     print("x2:", x2)
     print("y2:", y2)
+    '''
 
+    ''' Visualize matches '''
+
+    # Display image
+    big_im = np.concatenate((image1, image2), axis=1)
+    plt.imshow(big_im)
+    plt.plot(y1, x1, 'ro')
+    y2_shift = y2 + image1.shape[1]
+    plt.plot(y2_shift, x2, 'ro')
+
+    for i in range(x1.shape[0]):
+        plt.plot([y1[i], y2_shift[i]], [x1[i], x2[i]], marker = "o")
+
+    plt.show()
+
+
+    #crashlol()
 
     # RANSAC
     print("Doing RANSAC...")
