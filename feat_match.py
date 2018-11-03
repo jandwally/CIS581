@@ -54,7 +54,7 @@ def feat_match(descs1, descs2):
     
     ratio = best/second_best
     ratio2 = best2/second_best2
-    ratio2 = ratio2[0,0]
+    #ratio2 = ratio2[0,0]
 
     '''Check that both are greater than a threshold and if 
     so adding that pair of features'''
