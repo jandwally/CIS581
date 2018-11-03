@@ -35,46 +35,35 @@ def ransac_est_homography(x1, y1, x2, y2, thresh):
     rand_points1, rand_points2 = np.zeros(4).astype(int), np.zeros(4).astype(int)
     rand_points1 = x1[rands], y1[rands]
     rand_points2 = x2[rands], y2[rands]
-    print("rand_points1", rand_points1)
-    print("rand_points2", rand_points2)
 
     ''' 2. Compute homography relating these four matches '''
     homography = est_homography(rand_points1[0], rand_points1[1], rand_points2[0], rand_points2[1])
-    print("homography:", homography)
 
     ''' 3. Find number of inliers for this homography '''
 
     # Apply homography
     x_source = np.concatenate((x1.reshape((n,1)), y1.reshape((n,1)), np.ones((n,1))), axis=1).transpose((1,0)).astype(int)
     x_target = np.concatenate((x2.reshape((n,1)), y2.reshape((n,1)), np.ones((n,1))), axis=1).transpose((1,0)).astype(int)
-    print("x_source: ", x_source)
-    print("x_target: ", x_target)
     x_transform = np.dot(homography, x_source)
 
     # Normalize z coord back to 1
     x_transform = x_transform / x_transform[2]
-    print("x_transform: ", x_transform)
-    print("shape: ", x_transform.shape)
 
     # Compute SSD between transformed source and target
-    differences = np.sum((np.power(x_transform - x_target, 2)), axis=0)#.reshape((n,))
-    print("differences: ", differences)
-    print("shape: ", differences.shape)
+    differences = np.sum((np.power(x_transform - x_target, 2)), axis=0)
 
     # Find whether each point is an inlier (thresholding); set them to 1 if they pass
     inliner_idx = np.zeros(n).astype(int)
     inliner_idx[np.where(differences < ERROR_THRESH)] = 1
     num_inliners = np.count_nonzero(inliner_idx)
-    print("inliner_idx: ", inliner_idx)
-    print("num: ", num_inliners)
 
     ''' Return '''
     return homography, num_inliners, inliner_idx
 
   ''' 4. Repeat this process NUM_RANSAC times, and keep the one with the largest number of inliners '''
   best_homography = None
-  # most_inliers = MIN_CONSENSUS
-  most_inliers = 0
+  most_inliers = MIN_CONSENSUS
+  #most_inliers = 0
   inliner_idx = None
 
   # Do this many times, find the best

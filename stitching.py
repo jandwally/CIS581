@@ -57,15 +57,15 @@ def stitching():
 
     ''' TEST '''
     # Display image
-    plt.subplot(121)
-    plt.imshow(image1)
-    plt.plot(corners1[0], corners1[1], 'ro')
-
-    plt.subplot(122)
-    plt.imshow(image2)
-    plt.plot(corners2[0], corners2[1], 'ro')
-
-    plt.show()
+    '''plt.subplot(121)
+                plt.imshow(image1)
+                plt.plot(corners1[0], corners1[1], 'ro')
+            
+                plt.subplot(122)
+                plt.imshow(image2)
+                plt.plot(corners2[0], corners2[1], 'ro')
+            
+                plt.show()'''
 
     # get descriptors
     print("Get descriptor vectors...")
@@ -102,60 +102,35 @@ def stitching():
     matches_idx[np.where(matches_idx == -1)] = 0
 
     # Pair up the matches
-    x1, y1 = corners1[1], corners1[0]
+    x1, y1 = corners1[0], corners1[1]
     x2, y2 = np.zeros(num_match).astype(int), np.zeros(num_match).astype(int)
     idx = np.arange(0, num_match)
-    print("has_match", has_match)
-    print("matches", matches_idx)
-    print("idx:", idx)
-    print("corners2:", corners2)
-    x2[idx] = corners2[1][matches_idx]
-    y2[idx] = corners2[0][matches_idx]
+    x2[idx] = corners2[0][matches_idx]
+    y2[idx] = corners2[1][matches_idx]
 
     # Get rid of non-matches
-    '''
-    print("BEFORE")
-    print("x1:", x1)
-    print("y1:", y1)
-    print("x2:", x2)
-    print("y2:", y2)
-    '''
-
     x1 = x1[has_match]
     y1 = y1[has_match]
     x2 = x2[has_match]
     y2 = y2[has_match]
-
-    '''
-    print("AFTER")
-    print("x1:", x1)
-    print("y1:", y1)
-    print("x2:", x2)
-    print("y2:", y2)
-    '''
 
     ''' Visualize matches '''
 
     # Display image
     big_im = np.concatenate((image1, image2), axis=1)
     plt.imshow(big_im)
-    plt.plot(y1, x1, 'ro')
-    y2_shift = y2 + image1.shape[1]
-    plt.plot(y2_shift, x2, 'ro')
-
+    plt.plot(x1, y1, 'ro')
+    x2_shift = x2 + image1.shape[1]
+    plt.plot(x2_shift, y2, 'ro')
     for i in range(x1.shape[0]):
-        plt.plot([y1[i], y2_shift[i]], [x1[i], x2[i]], marker = "o")
-
+        plt.plot([x1[i], x2_shift[i]], [y1[i], y2[i]], marker = "o")
     plt.show()
-
-
-    #crashlol()
 
     # RANSAC
     print("Doing RANSAC...")
     homography, inliner_idx = ransac_est_homography(x1, y1, x2, y2, ERROR_THRESH)
 
-    # Mosaicing
+    ''' Mosaicing '''
     def apply_homography(output_coords):
 
         # Do homography
@@ -166,49 +141,46 @@ def stitching():
         x_input = x_transform[0], x_transform[1]
         return x_input
 
-    # TEST
-    plt.imshow(image1)
-    plt.show()
 
-    h, w = image1.shape[0:2]
-    mosaic_shape = (h, 3*w, 3)
+    # Apply homography to corner points, to get size of canvas
+    h, w = image2.shape[0:2]
+    x_corners = np.array([
+        [ 0, 0, w, w ],
+        [ 0, h, 0, h ],
+        [ 1, 1, 1, 1 ]
+    ])
+    x_corners_trans = np.dot(np.linalg.inv(homography), x_corners)
+    #x_corners_trans = np.dot(homography, x_corners)
+    x_corners_trans = x_corners_trans / x_corners_trans[2]
+    print("x_corners_trans:\n", np.round(x_corners_trans).astype(int))
 
-    image_transformed = np.zeros(image2.shape).astype(np.uint8)
-    print(image_transformed.shape)
-    for i in range(3):
-        print("transforming...")
-        image_transformed[:,:,i] = geometric_transform(image2[:,:,i], apply_homography, output_shape=mosaic_shape)
-        print(image_transformed[:,:,i])
-    plt.imshow(image_transformed)
-    plt.show()
+    # Create canvas
+    min_x = np.floor(np.min(x_corners_trans[0]))
+    min_y = np.floor(np.min(x_corners_trans[1]))
+    max_x = np.ceil(np.max(x_corners_trans[0]))
+    max_y = np.ceil(np.max(x_corners_trans[1]))
 
-    # Transform indices
-    # xs, ys = np.meshgrid(np.arange(0,h), np.arange(0,w))
-    # print("transforming (1)...")
-    # x_transformed = geometric_transform(xs, apply_homography)
-    # print("transforming (2)...")
-    # y_transformed = geometric_transform(ys, apply_homography)
+    neg_padding = -1 * min(np.array([0, min_y, min_x])).astype(int)
+    pos_padding = max(np.array([max_y-h, max_x-w])).astype(int)
+    print("required_padding", neg_padding, pos_padding)
 
-    # print(x_transformed)
-    # print(y_transformed)
+    # Compute required height+width
+    if (neg_padding == 0):
+        h1, w1 = image1.shape[0:2]
+        mosaic = np.zeros((h1 + pos_padding, w1 + pos_padding, 3)).astype(int)
+        mosaic[0:h1, 0:w1, :] = image1
+    if (neg_padding > 0):
+        h1, w1 = image1.shape[0:2]
+        mosaic = np.zeros((neg_padding + h1 + pos_padding, neg_padding + w1 + pos_padding, 3)).astype(int)
+        mosaic[neg_padding:h1+neg_padding, neg_padding:w1+neg_padding, :] = image1
 
-    image_transformed = np.zeros(image1.shape)
-    image_transformed[x_transformed, y_transformed, :] = image2[xs, ys, :]
-
-    plt.imshow(image_transformed)
-    plt.show()
-
-    # mosaic = np.zeros((h,3*w,3))
-
-    # # Put center image in the middle
-    # mosaic[:, w:(2*w), :] = image1
-
-    # is_mosaic = (image_transformed > np.array([0,0,0]))
-    # image_final[is_mosaic] = image1 * (not is_mosaic) + image_transformed * is_mosaic
-    # mosaic[:, w:(2*w), :] = image_final
-
+    # Plot the corners of image B oon image A
     plt.imshow(mosaic)
+    for i in range(4):
+        plt.plot(x_corners_trans[0,i], x_corners_trans[1,i], 'ro')
     plt.show()
+
+    print("todo")
 
 if __name__ == "__main__":
     stitching()
