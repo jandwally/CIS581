@@ -58,7 +58,7 @@ def feat_match(descs1, descs2):
 
     '''Check that both are greater than a threshold and if 
     so adding that pair of features'''
-    if ratio < 0.7 and ratio2 < 0.7:
+    if ratio < 0.8 and ratio2 < 0.8:
       matches_vector[row] = index_of_best
     else:
       matches_vector[row] = -1

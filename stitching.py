@@ -19,7 +19,7 @@ from feat_match import feat_match
 from ransac_est_homography import ransac_est_homography
 
 # constants
-ERROR_THRESH = 0.5
+ERROR_THRESH = 1.5
 
 '''
   Convert RGB image to gray one manually
@@ -38,8 +38,10 @@ def stitching():
 
     # load images
     print("Opening images...")
-    image1 = np.array(Image.open("images/philly-3.jpg").convert('RGB'))
-    image2 = np.array(Image.open("images/philly-4.jpg").convert('RGB'))
+    #image1 = np.array(Image.open("images/philly-3.jpg").resize((500,500), Image.ANTIALIAS).convert('RGB'))
+    #image2 = np.array(Image.open("images/philly-4.jpg").resize((500,500), Image.ANTIALIAS).convert('RGB'))
+    image1 = np.array(Image.open("test_img/1M.jpg").convert('RGB'))
+    image2 = np.array(Image.open("test_img/1R.jpg").convert('RGB'))
 
     # corner_detector
     print("Running corner detection...")
@@ -77,7 +79,6 @@ def stitching():
     # find the matches
     print("Finding matches...")
     matches_idx = feat_match(descriptors1, descriptors2)
-    print(matches_idx)
 
     #'''
     ### for now use these to test
@@ -131,16 +132,6 @@ def stitching():
     homography, inliner_idx = ransac_est_homography(x1, y1, x2, y2, ERROR_THRESH)
 
     ''' Mosaicing '''
-    def apply_homography(output_coords):
-
-        # Do homography
-        x_output = np.array([ output_coords[0], output_coords[1], 1 ]).astype(int)
-        x_transform = np.dot(homography, x_output)
-        x_transform = x_transform / x_transform[2]
-
-        x_input = x_transform[0], x_transform[1]
-        return x_input
-
 
     # Apply homography to corner points, to get size of canvas
     h, w = image2.shape[0:2]
@@ -155,10 +146,10 @@ def stitching():
     print("x_corners_trans:\n", np.round(x_corners_trans).astype(int))
 
     # Create canvas
-    min_x = np.floor(np.min(x_corners_trans[0]))
-    min_y = np.floor(np.min(x_corners_trans[1]))
-    max_x = np.ceil(np.max(x_corners_trans[0]))
-    max_y = np.ceil(np.max(x_corners_trans[1]))
+    min_x = np.floor(np.min(x_corners_trans[0])).astype(int)
+    min_y = np.floor(np.min(x_corners_trans[1])).astype(int)
+    max_x = np.ceil(np.max(x_corners_trans[0])).astype(int)
+    max_y = np.ceil(np.max(x_corners_trans[1])).astype(int)
 
     neg_padding = -1 * min(np.array([0, min_y, min_x])).astype(int)
     pos_padding = max(np.array([max_y-h, max_x-w])).astype(int)
@@ -167,20 +158,69 @@ def stitching():
     # Compute required height+width
     if (neg_padding == 0):
         h1, w1 = image1.shape[0:2]
-        mosaic = np.zeros((h1 + pos_padding, w1 + pos_padding, 3)).astype(int)
+        mosaic = np.zeros((h1 + pos_padding, w1 + pos_padding, 3)).astype(np.uint8)
         mosaic[0:h1, 0:w1, :] = image1
     if (neg_padding > 0):
         h1, w1 = image1.shape[0:2]
-        mosaic = np.zeros((neg_padding + h1 + pos_padding, neg_padding + w1 + pos_padding, 3)).astype(int)
+        mosaic = np.zeros((neg_padding + h1 + pos_padding, neg_padding + w1 + pos_padding, 3)).astype(np.uint8)
         mosaic[neg_padding:h1+neg_padding, neg_padding:w1+neg_padding, :] = image1
 
     # Plot the corners of image B oon image A
-    plt.imshow(mosaic)
+    plt.imshow(mosaic.astype(np.uint8))
     for i in range(4):
         plt.plot(x_corners_trans[0,i], x_corners_trans[1,i], 'ro')
     plt.show()
 
-    print("todo")
+    # Define function to warp with
+    def apply_homography(output_coords):
+
+        # Do homography
+        x_output = np.array([ output_coords[1], output_coords[0], 1 ]).astype(int)
+        x_transform = np.dot(homography, x_output)
+        x_transform = x_transform / x_transform[2]
+
+        # Add constant shift to deal with padding
+        x_input = x_transform[1] - neg_padding, x_transform[0] - neg_padding
+        return x_input
+
+    # Warp image
+    warped_image = np.zeros(mosaic.shape).astype(np.uint8)
+    for i in range(3):
+        print("transform:", i)
+        warped_image[:,:,i] = geometric_transform(image2[:,:,i], apply_homography, output_shape=warped_image.shape[0:2])
+        plt.imshow(warped_image.astype(np.uint8))
+        for i in range(4):
+            plt.plot(x_corners_trans[0,i], x_corners_trans[1,i], 'ro')
+        plt.show()
+
+    # Copy the warped image into the mosaic
+    where_nonzero_warped = (np.sum(warped_image, axis=2) > 0)
+    where_nonzero_original = (np.sum(mosaic, axis=2) > 0)
+
+    plt.imshow(255*(np.sum(mosaic, axis=2) > 0))
+    plt.show()
+    plt.imshow(255*(np.sum(warped_image, axis=2) > 0))
+    plt.show()
+
+    print("Combining images...")
+    for r in range(mosaic.shape[0]):
+        for c in range(mosaic.shape[1]):
+
+            # Both: average the two
+            if where_nonzero_original[r,c] and where_nonzero_warped[r,c]:
+                mosaic[r,c,:] = 0.5 * mosaic[r,c,:] + 0.5 * warped_image[r,c,:]
+
+            # Warped image only
+            elif where_nonzero_warped[r,c]:
+                mosaic[r,c,:] = warped_image[r,c,:]
+
+    # Plot the corners of image B oon image A
+    plt.imshow(mosaic.astype(np.uint8))
+    '''
+    for i in range(4):
+        plt.plot(x_corners_trans[0,i], x_corners_trans[1,i], 'ro')
+    '''
+    plt.show()
 
 if __name__ == "__main__":
     stitching()

@@ -21,7 +21,7 @@ from scipy.optimize import least_squares
 from est_homography import est_homography
 
 NUM_RANSAC = 1000
-MIN_CONSENSUS = 10
+MIN_CONSENSUS = 0
 
 def ransac_est_homography(x1, y1, x2, y2, thresh):
   n = x1.shape[0]
@@ -69,6 +69,7 @@ def ransac_est_homography(x1, y1, x2, y2, thresh):
   # Do this many times, find the best
   for i in np.arange(0, NUM_RANSAC):
     homography, num_inliners, this_inliner_idx = ransac()
+    #print("i =", i, ":", num_inliners, this_inliner_idx)
 
     # Save if this homography was better than the previous best
     if num_inliners > most_inliers:
@@ -89,5 +90,5 @@ def ransac_est_homography(x1, y1, x2, y2, thresh):
   final_y2 = y2[inliner_idx == 1]
 
   # Recompute final homography with all inliers, and return
-  final_homography = est_homography(x1, y1, x2, y2)
+  final_homography = est_homography(final_x1, final_y1, final_x2, final_y2)
   return final_homography, inliner_idx
