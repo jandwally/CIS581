@@ -33,12 +33,11 @@ def feat_match(descs1, descs2):
   dist = spatial.distance.cdist(descs1, descs2, 'cityblock')
   '''Repeat the same process except inverse: we are now iterating through
       the columns of descs2 and finding the difference with the features (cols) of descs1'''
-
   dist2 = spatial.distance.cdist(descs2, descs1, 'cityblock')
 
   n = descs1.shape[0]
   matches_vector = np.zeros(n).astype(int)
-  print(n)
+
   for row in range(n):
     current = dist[row,:]
     current = np.sort(current)
@@ -49,20 +48,19 @@ def feat_match(descs1, descs2):
     second_best = current[1]
     index_of_best = np.where(dist[row,:] == best)[0]
     index_of_second_best = np.where(dist[row,:] == second_best)[0]
+
     best2 = dist2[index_of_best,row]
     second_best2 = dist2[index_of_second_best, row]
+    
     ratio = best/second_best
     ratio2 = best2/second_best2
-    '''Check that both are greater than a threshold and if so adding that pair of featuers'''
+    ratio2 = ratio2[0,0]
+
+    '''Check that both are greater than a threshold and if 
+    so adding that pair of features'''
     if ratio < 0.7 and ratio2 < 0.7:
-          #take index_of_best, index_of_second_best,
       matches_vector[row] = index_of_best
-      # pairs.append(index_of_best)
     else:
       matches_vector[row] = -1
   return matches_vector
-'''
-a= np.array([[5,4,3],[10,9,1]])
-c = np.array([[1,2,3],[4,5,6]])
-print(feat_match(a,c))
-'''
+
