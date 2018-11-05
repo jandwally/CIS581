@@ -72,7 +72,7 @@ def mosaic(image1, image2):
     plt.imshow(image2)
     plt.plot(corners2[0], corners2[1], 'ro')
     plt.show()
-  display_after_anms()
+  #display_after_anms()
 
 
   ''' Get descriptors '''
