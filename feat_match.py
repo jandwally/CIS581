@@ -25,7 +25,6 @@ def feat_match(descs1, descs2):
   descs2 = np.transpose(descs2)
 
   h,w= descs1.shape[0:2]
-  print(descs2)
   b = np.zeros([h*w,h,w])
   '''For every feature in descs1, i.e. every colomn, lets find the squared 
   difference and put it in diff[:,j]''' 
@@ -58,7 +57,7 @@ def feat_match(descs1, descs2):
 
     '''Check that both are greater than a threshold and if 
     so adding that pair of features'''
-    if ratio < 0.8 and ratio2 < 0.8:
+    if ratio < 0.7 and ratio2 < 0.7:
       matches_vector[row] = index_of_best
     else:
       matches_vector[row] = -1

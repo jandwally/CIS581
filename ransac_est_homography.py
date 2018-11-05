@@ -63,7 +63,6 @@ def ransac_est_homography(x1, y1, x2, y2, thresh):
   ''' 4. Repeat this process NUM_RANSAC times, and keep the one with the largest number of inliners '''
   best_homography = None
   most_inliers = MIN_CONSENSUS
-  #most_inliers = 0
   inliner_idx = None
 
   # Do this many times, find the best
@@ -77,9 +76,9 @@ def ransac_est_homography(x1, y1, x2, y2, thresh):
       most_inliers = num_inliners
       inliner_idx = this_inliner_idx
 
-  print("BEST RANSAC:")
-  print("best_homography:", best_homography)
-  print("most_inliers:", most_inliers)
+  #print("BEST RANSAC:")
+  #print("best_homography:", best_homography)
+  #print("most_inliers:", most_inliers)
 
   ''' 5. Compute the least squares estimate for homography using all inlier matches '''
 
